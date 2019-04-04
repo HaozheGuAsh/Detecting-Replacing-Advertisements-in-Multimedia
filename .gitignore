@@ -1,0 +1,4 @@
+# Ignore Data Files
+Data/dataset
+Data/dataset2
+Data/*.zip
