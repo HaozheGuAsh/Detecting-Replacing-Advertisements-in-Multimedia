@@ -355,23 +355,12 @@ public class MediaPlayer {
 
 	public static void main(String[] args) {
 
-		/* Procedures
-		 * - Resolve input arguments
-		 * - Read Images from input video file, frame by frame
-		 * - Perform scaling/anti-aliasing image by image
-		 * - Display movie with altered images at user-decided frameRate
-		 */
-
 		MediaPlayer player = new MediaPlayer();
 
 		/* Resolve Input Arguments */
 		player.resolveArguments(args);
 
 		String seperator = "--------------------";
-
-		/* Read Videos From File */
-		// System.out.println(seperator + "Reading Partial Video" + seperator);
-		// player.loadVideo(player.frameVector);
 
 		/* Display  Media */
 		System.out.println(seperator + "Playing Media" + seperator);
