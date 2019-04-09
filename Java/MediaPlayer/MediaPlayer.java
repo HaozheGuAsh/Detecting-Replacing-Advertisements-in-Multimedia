@@ -30,11 +30,69 @@ public class MediaPlayer {
 	Integer width = 480;
 	Integer height = 270;
 	Integer frameRate = 30;
+	Integer totalFrames = 0;
+	String totalTimeString;
 
 	// Because video is too large to fit in memory, load them use work thread
 	Integer frameOffset = 0;
+	Integer currentFrame = 0;
 	Integer bufferSize = 100;
 	Integer freezeGap = 500;
+
+	private Boolean getDataSize() {
+		try {
+			int frameLength = width * height * 3;
+			Integer count = 0;
+
+			File file = new File(videoPath);
+			RandomAccessFile raf = new RandomAccessFile(file, "r");
+
+			long len = frameLength;
+			Integer flag = 0;
+			long position = 0;
+
+			while (flag != -1) {
+				byte[] bytes = new byte[(int) len];
+
+				raf.seek(position);
+				flag = raf.read(bytes);
+				if (flag == -1) {
+					totalFrames = count;
+					totalTimeString = framesToTime(totalFrames);
+					raf.close();
+					return true;
+				}
+				position += len;
+				count++;
+			}
+			raf.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	private void displayConfiguration() {
+		String seperator = "--------------------";
+		System.out.println(seperator + "Parsing Input Argument" + seperator);
+		System.out.println("Parsing Input Argument -> OK");
+		System.out.println("Dataset: " + dataset);
+		System.out.println("Video file: " + videoPath);
+		System.out.println("Audio file: " + audioPath);
+		System.out.println("Frame Rate: " + frameRate);
+		System.out.println("Total Length: " + totalTimeString);
+		System.out.println("buffer Size: " + bufferSize);
+	}
+
+	private String framesToTime(Integer numberFrames) {
+		Integer totalSeconds = (numberFrames / frameRate);
+		Integer minutes = (totalSeconds % 3600) / 60;
+		Integer seconds = totalSeconds % 60;
+
+		return String.format("%02d:%02d", minutes, seconds);
+	}
 
 	private void resolveArguments(String[] args) {
 		if (args.length != 1) {
@@ -61,16 +119,6 @@ public class MediaPlayer {
 			}
 
 		}
-
-		/* Testing Input Resolver */
-		String seperator = "--------------------";
-		System.out.println(seperator + "Parsing Input Argument" + seperator);
-		System.out.println("Parsing Input Argument -> OK");
-		System.out.println("Dataset: " + dataset);
-		System.out.println("Video file: " + videoPath);
-		System.out.println("Audio file: " + audioPath);
-		System.out.println("Frame Rate: " + frameRate);
-		System.out.println("buffer Size: " + bufferSize);
 	}
 
 	private Boolean loadFrame() {
@@ -138,6 +186,13 @@ public class MediaPlayer {
 		private Boolean timerStarted = false;
 		private Boolean isPaused = false;
 		private FrameLoader worker;
+
+		JLabel statusBar = new JLabel();
+		String idleString = "Waiting";
+		String playingString = "Playing";
+		String pauseString = "Pausing";
+
+		JLabel timeBar = new JLabel();
 
 		private class FrameLoader extends SwingWorker<Boolean, Void> {
 			@Override
@@ -228,7 +283,7 @@ public class MediaPlayer {
 			c.anchor = GridBagConstraints.CENTER;
 			c.weightx = 1;
 			c.gridx = 0;
-			c.gridwidth = 6;
+			c.gridwidth = 9;
 			c.gridy = 0;
 			this.add(label, c);
 
@@ -276,10 +331,43 @@ public class MediaPlayer {
 			c.gridwidth = 1;
 			c.gridy = 1;
 			this.add(stop, c);
+
+			// Status Bar
+			statusBar.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 10));
+			statusBar.setText(idleString);
+			c = new GridBagConstraints();
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.ipady = 0;
+			c.weighty = 0;
+			c.anchor = GridBagConstraints.LAST_LINE_END;
+			c.insets = new Insets(0, 10, 6, 0);
+			c.gridx = 5;
+			c.gridwidth = 2;
+			c.gridy = 1;
+			this.add(statusBar, c);
+
+			// Time Bar
+			timeBar.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+			setTimeBar();
+			c = new GridBagConstraints();
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.ipady = 0;
+			c.weighty = 0;
+			c.anchor = GridBagConstraints.LAST_LINE_END;
+			c.insets = new Insets(0, 10, 5, 0);
+			c.gridx = 7;
+			c.gridwidth = 2;
+			c.gridy = 1;
+			this.add(timeBar, c);
+		}
+
+		private void setTimeBar() {
+			timeBar.setText(framesToTime(currentFrame) + " / " + totalTimeString);
 		}
 
 		private void update() {
 			// System.out.println("Current Frame Queue Size: " + frames.size());
+			setTimeBar();
 			if (frames.isEmpty() && !hasMoreFrames) {
 				timer.stop();
 			} else if (frames.isEmpty()) {
@@ -287,6 +375,7 @@ public class MediaPlayer {
 				return;
 			} else {
 				label.setIcon(new ImageIcon(frames.remove()));
+				currentFrame++;
 			}
 		}
 
@@ -294,6 +383,7 @@ public class MediaPlayer {
 			JFrame frame = new JFrame("MediaPlayer");
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			frame.add(this);
+			frame.setResizable(false);
 			frame.pack();
 			frame.setVisible(true);
 		}
@@ -306,6 +396,7 @@ public class MediaPlayer {
 
 			timerStarted = false;
 			isPaused = true;
+			statusBar.setText(pauseString);
 		}
 
 		private void onButtonResume() {
@@ -337,6 +428,7 @@ public class MediaPlayer {
 				}
 			});
 			timerStarted = true;
+			statusBar.setText(playingString);
 			timer.start();
 		}
 
@@ -350,6 +442,7 @@ public class MediaPlayer {
 			hasMoreFrames = true;
 			isPaused = false;
 			frames.clear();
+			statusBar.setText(idleString);
 		}
 	}
 
@@ -359,6 +452,8 @@ public class MediaPlayer {
 
 		/* Resolve Input Arguments */
 		player.resolveArguments(args);
+		player.getDataSize();
+		player.displayConfiguration();
 
 		String seperator = "--------------------";
 
