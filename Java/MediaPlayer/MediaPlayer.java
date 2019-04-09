@@ -39,7 +39,7 @@ public class MediaPlayer {
 	Integer bufferSize = 100;
 	Integer freezeGap = 500;
 
-	private Boolean getDataSize() {
+	private Boolean getVideoSize() {
 		try {
 			int frameLength = width * height * 3;
 			Integer count = 0;
@@ -453,7 +453,7 @@ public class MediaPlayer {
 
 		/* Resolve Input Arguments */
 		player.resolveArguments(args);
-		player.getDataSize();
+		player.getVideoSize();
 		player.displayConfiguration();
 
 		String seperator = "--------------------";
