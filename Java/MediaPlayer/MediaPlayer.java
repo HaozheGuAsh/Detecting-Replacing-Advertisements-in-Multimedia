@@ -439,6 +439,7 @@ public class MediaPlayer {
 			}
 			timerStarted = false;
 			frameOffset = 0;
+			currentFrame = 0;
 			hasMoreFrames = true;
 			isPaused = false;
 			frames.clear();
