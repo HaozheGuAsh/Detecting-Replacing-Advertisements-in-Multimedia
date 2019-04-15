@@ -18,6 +18,17 @@ import javax.swing.*;
 import java.util.Queue;
 import java.util.Random;
 
+import java.io.BufferedInputStream;
+import java.io.InputStream;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.sound.sampled.DataLine.Info;
+
 public class MediaPlayer {
 	JFrame frame;
 	JLabel lbIm1;
@@ -32,6 +43,8 @@ public class MediaPlayer {
 	Integer frameRate = 30;
 	Integer totalFrames = 0;
 	String totalTimeString;
+
+	PlaySound audioPlayer;
 
 	// Because video is too large to fit in memory, load them use work thread
 	Integer frameOffset = 0;
@@ -146,13 +159,13 @@ public class MediaPlayer {
 			Integer ind = 0;
 			for (int y = 0; y < height; y++) {
 				for (int x = 0; x < width; x++) {
-					//						byte a = 0;
+					// byte a = 0;
 					byte r = bytes[ind];
 					byte g = bytes[ind + height * width];
 					byte b = bytes[ind + height * width * 2];
 
 					int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
-					//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+					// int pix = ((a << 24) + (r << 16) + (g << 8) + b);
 					img.setRGB(x, y, pix);
 					ind++;
 				}
@@ -179,7 +192,94 @@ public class MediaPlayer {
 
 	}
 
-	class FramePanel extends JPanel {
+	@SuppressWarnings("serial")
+	protected class PlayWaveException extends Exception {
+
+		public PlayWaveException(String message) {
+			super(message);
+		}
+
+		public PlayWaveException(Throwable cause) {
+			super(cause);
+		}
+
+		public PlayWaveException(String message, Throwable cause) {
+			super(message, cause);
+		}
+
+	}
+
+	protected class PlaySound {
+
+		private InputStream waveStream;
+
+		private final int EXTERNAL_BUFFER_SIZE = 524288; // 128Kb
+
+		/**
+		 * CONSTRUCTOR
+		 */
+		private PlaySound(String inputFile) {
+			FileInputStream inputStream;
+			try {
+				inputStream = new FileInputStream(inputFile);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+				return;
+			}
+			this.waveStream = inputStream;
+		}
+
+		private void play() throws PlayWaveException {
+
+			AudioInputStream audioInputStream = null;
+			try {
+				InputStream bufferedIn = new BufferedInputStream(this.waveStream);
+				audioInputStream = AudioSystem.getAudioInputStream(bufferedIn);
+
+			} catch (UnsupportedAudioFileException e1) {
+				throw new PlayWaveException(e1);
+			} catch (IOException e1) {
+				throw new PlayWaveException(e1);
+			}
+
+			// Obtain the information about the AudioInputStream
+			AudioFormat audioFormat = audioInputStream.getFormat();
+			Info info = new Info(SourceDataLine.class, audioFormat);
+
+			// opens the audio channel
+			SourceDataLine dataLine = null;
+			try {
+				dataLine = (SourceDataLine) AudioSystem.getLine(info);
+				dataLine.open(audioFormat, this.EXTERNAL_BUFFER_SIZE);
+			} catch (LineUnavailableException e1) {
+				throw new PlayWaveException(e1);
+			}
+
+			// Starts the music :P
+			dataLine.start();
+			int readBytes = 0;
+			byte[] audioBuffer = new byte[this.EXTERNAL_BUFFER_SIZE];
+
+			try {
+				while (readBytes != -1) {
+					readBytes = audioInputStream.read(audioBuffer, 0, audioBuffer.length);
+					if (readBytes >= 0) {
+						dataLine.write(audioBuffer, 0, readBytes);
+					}
+				}
+			} catch (IOException e1) {
+				throw new PlayWaveException(e1);
+			} finally {
+				// plays what's left and and closes the audioChannel
+				dataLine.drain();
+				dataLine.close();
+			}
+
+		}
+	}
+
+	@SuppressWarnings("serial")
+	protected class FramePanel extends JPanel {
 
 		private Boolean hasMoreFrames = true;
 		private JLabel label = new JLabel();
@@ -195,6 +295,42 @@ public class MediaPlayer {
 		JLabel timeBar = new JLabel();
 
 		private class FrameLoader extends SwingWorker<Boolean, Void> {
+			@Override
+			protected Boolean doInBackground() throws Exception {
+				// Load Frames to buffer
+				System.out.println("Worker Start");
+				while (true) {
+					if (frames.size() < bufferSize) {
+						Boolean ret = loadFrame();
+						if (!ret)
+							return true;
+					} else {
+						if (new Random().nextInt(10) > 8)
+							System.out.println("Worker sleeps");
+						Thread.sleep(freezeGap);
+					}
+				}
+			}
+
+			protected void done() {
+				try {
+					// Retrive worker status
+					get();
+					// Flag Source condition
+					hasMoreFrames = false;
+					System.out.println("Worker Finish");
+
+				} catch (CancellationException e) {
+					System.out.println("FrameLoader Cancelled");
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} catch (ExecutionException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		private class AudioPlayer extends SwingWorker<Boolean, Void> {
 			@Override
 			protected Boolean doInBackground() throws Exception {
 				// Load Frames to buffer
@@ -430,6 +566,7 @@ public class MediaPlayer {
 			timerStarted = true;
 			statusBar.setText(playingString);
 			timer.start();
+
 		}
 
 		private void onButtonStop() {
@@ -458,7 +595,7 @@ public class MediaPlayer {
 
 		String seperator = "--------------------";
 
-		/* Display  Media */
+		/* Display Media */
 		System.out.println(seperator + "Playing Media" + seperator);
 		player.displayVideo();
 	}
