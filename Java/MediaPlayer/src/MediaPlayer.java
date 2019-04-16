@@ -56,7 +56,8 @@ public class MediaPlayer {
 				
 //				Initialize VideoPlayer and AudioPlayer
 				videoPlayer = new VideoPlayer(videoPath);
-				audioPlayer = new AudioPlayer(audioPath);
+				audioPlayer = new AudioPlayer(audioPath,videoPlayer.getFrameRate());
+
 				
 			} else {
 				System.out.println("Invalid Number of Valid Files in Given Dataset");
@@ -269,6 +270,7 @@ public class MediaPlayer {
 			if (timerStarted)
 				return;
 			videoPlayer.start();
+			audioPlayer.start();
 			timerStarted = true;
 			statusBar.setText(playingString);
 			

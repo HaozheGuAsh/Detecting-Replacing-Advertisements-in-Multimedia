@@ -142,7 +142,7 @@ public class VideoPlayer {
 		@Override
 		protected Boolean doInBackground() throws Exception {
 			// Load Frames to buffer
-			System.out.println("Worker Start");
+			System.out.println("FrameLoader Start");
 			while (!isCancelled()) {
 				if (frames.size() < bufferSize) {
 					Boolean ret = loadFrame();
@@ -150,11 +150,11 @@ public class VideoPlayer {
 						return true;
 				} else {
 					if (new Random().nextInt(10) > 8)
-						System.out.println("Worker sleeps");
+						System.out.println("FrameLoader Worker sleeps");
 					Thread.sleep(freezeGap);
 				}
 			}
-			System.out.println("Worker got Cancel Signal");
+			System.out.println("FrameLoader Worker got Cancel Signal");
 			return false;
 		}
 
@@ -166,9 +166,9 @@ public class VideoPlayer {
 				// Flag Source condition
 				if(flag) {
 					hasMoreFrames = false;
-					System.out.println("Worker Finish");
+					System.out.println("FrameLoader Worker Finish");
 				}else {
-					System.out.println("Worker Cancelled");
+					System.out.println("FrameLoader Worker Cancelled");
 				}
 
 
