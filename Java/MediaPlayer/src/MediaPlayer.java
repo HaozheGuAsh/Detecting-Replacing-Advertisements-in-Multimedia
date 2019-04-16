@@ -11,10 +11,11 @@ import java.util.List;
 import java.util.stream.Stream;
 import javax.swing.*;
 import videoplayer.VideoPlayer;
+import audioplayer.AudioPlayer;
 
 public class MediaPlayer {
 	VideoPlayer videoPlayer;
-//	AudioPlayer audioPlayer;
+	AudioPlayer audioPlayer;
 	
 	String dataset;
 	String videoPath;
@@ -55,6 +56,8 @@ public class MediaPlayer {
 				
 //				Initialize VideoPlayer and AudioPlayer
 				videoPlayer = new VideoPlayer(videoPath);
+				audioPlayer = new AudioPlayer(audioPath);
+				
 			} else {
 				System.out.println("Invalid Number of Valid Files in Given Dataset");
 				System.exit(-1);
