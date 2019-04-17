@@ -230,6 +230,9 @@ public class MediaPlayer {
 
 		private void update() {
 			// System.out.println("Current Frame Queue Size: " + frames.size());
+//			System.out.println("Current Frame Offset: "+ videoPlayer.getCurFrameOffset());
+//			System.out.println("Current Audio Per Video Offset: "+ audioPlayer.getAudioToVideoFrame());
+
 			setTimeBar();
 			if (videoPlayer.isQueueEmpty() && !videoPlayer.hasMoreFrames()) {
 				timer.stop();
@@ -257,6 +260,7 @@ public class MediaPlayer {
 			timerStarted = false;
 			isPaused = true;
 			statusBar.setText(pauseString);
+			audioPlayer.pause();
 		}
 
 		private void onButtonResume() {
@@ -264,6 +268,7 @@ public class MediaPlayer {
 				return;
 			onButtonStart();
 			isPaused = false;
+			audioPlayer.resume();
 		}
 
 		private void onButtonStart() {
@@ -290,6 +295,7 @@ public class MediaPlayer {
 				videoPlayer.cancelWorker();
 			}
 			timer.stop();
+			audioPlayer.stop();
 			videoPlayer.stop();
 			timerStarted = false;
 			isPaused = false;

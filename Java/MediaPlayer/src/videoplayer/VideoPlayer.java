@@ -51,7 +51,9 @@ public class VideoPlayer {
 		return bufferSize;
 	}
 	
-
+	public Integer getCurFrameOffset() {
+		return currentFrame;
+	}
 	public BufferedImage popFrame() {
 		currentFrame++;
 		return frames.remove();

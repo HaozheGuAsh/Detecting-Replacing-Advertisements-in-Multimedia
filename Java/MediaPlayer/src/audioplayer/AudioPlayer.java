@@ -12,15 +12,16 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.DataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
-import javax.sound.sampled.DataLine.Info;
 import javax.swing.SwingWorker;
 
 public class AudioPlayer {
 	String audioPath;
 	FileInputStream inputStream;
 	AudioInputStream waveStream;
+	Boolean isPaused = false;
 	
 	Integer videoFps;
 	
@@ -28,16 +29,13 @@ public class AudioPlayer {
 	private final int framePerSecond = 48000;
 	private final long bytePerVideoFrame;
 	
-	private long curAudioOffset;
-	private long totalBytes = 0;
 	
-	SourceDataLine dataLine = null;
-	private final int EXTERNAL_BUFFER_SIZE = 524288;// 128Kb
+	Clip dataClip = null;
+	long dataClipTime = 0;
 	Integer freezeGap = 500;
 	
 	AudioRunner audioRunner;
 
-	
 	
 	private void openAudioStream() throws Exception {
 		// opens the inputStream
@@ -56,12 +54,12 @@ public class AudioPlayer {
 			
 			// Obtain the information about the AudioInputStream
 			AudioFormat audioFormat = waveStream.getFormat();
-			Info info = new Info(SourceDataLine.class, audioFormat);
+			DataLine.Info info = new DataLine.Info(Clip.class, audioFormat);
 //			System.out.println("Audio Info: "+info.toString());
 			
 			try {
-			    dataLine = (SourceDataLine) AudioSystem.getLine(info);
-			    dataLine.open(audioFormat, EXTERNAL_BUFFER_SIZE);
+				dataClip = (Clip) AudioSystem.getLine(info);
+				dataClip.open(waveStream);
 			} catch (LineUnavailableException e) {
 			    throw new PlayWaveException(e);
 			}
@@ -72,44 +70,65 @@ public class AudioPlayer {
 		}
 	}
 	
+	private void getDataClipPosition() {
+		dataClipTime = dataClip.getMicrosecondPosition();
+	}
+	
+	private void setDataClipPosition() {
+		dataClip.setMicrosecondPosition(dataClipTime);
+	}
+	
+	private long curAudioOffset() {
+		// 2 byte per frame
+		return dataClip.getLongFramePosition()*2;
+	}
+	
+	public long getAudioToVideoFrame() {
+		return curAudioOffset()/bytePerVideoFrame;
+	}
+	
 	public void start() {
+		if(isPaused) 
+			return;
+		
+		System.out.println("Start AudioPlayer");
 		try {
 			openAudioStream();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-		System.out.println("Finish Preparing Audio DataLine");
-		
 		audioRunner = new AudioRunner();
 		audioRunner.execute();
+	}
+	
+	public void resume() {
+		System.out.println("Resume AudioPlayer");
+		isPaused = false;
+		setDataClipPosition();
+		dataClip.start();
+	}
+	
+	public void pause() {
+		System.out.println("Pause AudioPlayer");
+		isPaused = true;
+		getDataClipPosition();
+		dataClip.stop();
+	}
+	
+	public void stop() {
+		System.out.println("Stop AudioPlayer");
+		isPaused = false;
+		dataClip.stop();
 	}
 	
 	private class AudioRunner extends SwingWorker<Boolean, Void>{
 		@Override
 		protected Boolean doInBackground() throws Exception {
-			if(dataLine.isOpen()) {
+			if(dataClip.isOpen()) {
 				System.out.println("AudioRunner Begins");
-				dataLine.start();
-				
-				int readBytes = 0;
-				byte[] audioBuffer = new byte[EXTERNAL_BUFFER_SIZE];
+				dataClip.start();
 
-				try {
-				    while (readBytes != -1) {
-						readBytes = waveStream.read(audioBuffer, 0,audioBuffer.length);
-						if (readBytes >= 0){
-						    dataLine.write(audioBuffer, 0, readBytes);
-						    totalBytes += EXTERNAL_BUFFER_SIZE;
-						}
-				    }
-				} catch (IOException e1) {
-				    throw new PlayWaveException(e1);
-				}  finally {
-				    // plays what's left and and closes the audioChannel
-				    dataLine.drain();
-				    dataLine.close();
-				}
 			}else {
 				System.out.println("DataLine not Ready Upon Invocation");
 				System.exit(1);
@@ -117,6 +136,7 @@ public class AudioPlayer {
 			while(!isCancelled()) {
 				Thread.sleep(freezeGap);
 			}
+			dataClip.close();
 
 			return true;
 		}
