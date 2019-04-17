@@ -203,7 +203,7 @@ public class MediaPlayer {
 			c.ipady = 0;
 			c.weighty = 0;
 			c.anchor = GridBagConstraints.LAST_LINE_END;
-			c.insets = new Insets(0, 10, 6, 0);
+			c.insets = new Insets(0, 8, 7, 0);
 			c.gridx = 5;
 			c.gridwidth = 2;
 			c.gridy = 1;
@@ -217,7 +217,7 @@ public class MediaPlayer {
 			c.ipady = 0;
 			c.weighty = 0;
 			c.anchor = GridBagConstraints.LAST_LINE_END;
-			c.insets = new Insets(0, 10, 5, 0);
+			c.insets = new Insets(0, 8, 6, 0);
 			c.gridx = 7;
 			c.gridwidth = 2;
 			c.gridy = 1;
