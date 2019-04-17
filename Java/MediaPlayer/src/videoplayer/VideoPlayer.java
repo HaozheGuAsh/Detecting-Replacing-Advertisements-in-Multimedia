@@ -151,8 +151,8 @@ public class VideoPlayer {
 					if (!ret)
 						return true;
 				} else {
-					if (new Random().nextInt(10) > 8)
-						System.out.println("FrameLoader Worker sleeps");
+//					if (new Random().nextInt(10) > 8)
+//						System.out.println("FrameLoader Worker sleeps");
 					Thread.sleep(freezeGap);
 				}
 			}

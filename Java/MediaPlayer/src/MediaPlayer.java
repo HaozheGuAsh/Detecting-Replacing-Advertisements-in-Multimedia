@@ -230,8 +230,8 @@ public class MediaPlayer {
 
 		private void update() {
 			// System.out.println("Current Frame Queue Size: " + frames.size());
-//			System.out.println("Current Frame Offset: "+ videoPlayer.getCurFrameOffset());
-//			System.out.println("Current Audio Per Video Offset: "+ audioPlayer.getAudioToVideoFrame());
+//			 System.out.println("Current Frame Offset: "+ videoPlayer.getCurFrameOffset());
+//			 System.out.println("Current Audio Per Video Offset: "+ audioPlayer.getAudioToVideoFrame());
 
 			setTimeBar();
 			if (videoPlayer.isQueueEmpty() && !videoPlayer.hasMoreFrames()) {
@@ -240,7 +240,19 @@ public class MediaPlayer {
 				System.out.println("Waiting for Loader to Finish! Freeze the screen");
 				return;
 			} else {
-				label.setIcon(new ImageIcon(videoPlayer.popFrame()));
+				// Control Synchronization problem here
+				long vFrame = videoPlayer.getCurFrameOffset();
+				long aFrame = audioPlayer.getAudioToVideoFrame();
+				if(aFrame > vFrame) {
+					// If audio is ahead, drop one frame every time to catch up
+					videoPlayer.popFrame();
+					label.setIcon(new ImageIcon(videoPlayer.popFrame()));
+				}else if(vFrame > aFrame) {
+					// If video is ahead, wait for audio to catch up
+					return;
+				}else {
+					label.setIcon(new ImageIcon(videoPlayer.popFrame()));
+				}
 			}
 		}
 
