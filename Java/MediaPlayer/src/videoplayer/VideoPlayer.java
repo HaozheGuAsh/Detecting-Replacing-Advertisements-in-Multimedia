@@ -5,10 +5,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.JFrame;
@@ -19,7 +18,7 @@ import javax.swing.SwingWorker;
 public class VideoPlayer {
 	JFrame frame;
 	JLabel lbIm1;
-	Queue<BufferedImage> frames = new LinkedList<>();
+	Queue<BufferedImage> frames = new ConcurrentLinkedQueue<>();
 	
 	String videoPath;
 	Integer width = 480;
