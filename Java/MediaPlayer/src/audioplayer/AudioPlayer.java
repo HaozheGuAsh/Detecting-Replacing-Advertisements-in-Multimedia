@@ -103,7 +103,11 @@ public class AudioPlayer {
 			return;
 		
 		System.out.println("Start AudioPlayer");
-		
+		try {
+			openAudioStream();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		audioRunner = new AudioRunner();
 		audioRunner.execute();
 	}
@@ -171,11 +175,5 @@ public class AudioPlayer {
 		videoFps = frameRate;
 		bytePerVideoFrame = bytePerFrame*framePerSecond/videoFps;
 		audioPath = path;
-		try {
-			openAudioStream();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
 	}
 }
