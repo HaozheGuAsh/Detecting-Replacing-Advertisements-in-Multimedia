@@ -319,6 +319,9 @@ public class MediaPlayer {
 		}
 
 		private void onButtonStop() {
+			if(!isPaused && !timerStarted)
+				return;
+						
 			if (timerStarted) {
 				videoPlayer.cancelWorker();
 			}
