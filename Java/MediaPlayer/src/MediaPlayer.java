@@ -8,9 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Stream;
 import javax.swing.*;
+
 import videoplayer.VideoPlayer;
 import audioplayer.AudioPlayer;
 
@@ -21,7 +21,7 @@ public class MediaPlayer {
 	String dataset;
 	String videoPath;
 	String audioPath;
-
+	
 	private void displayConfiguration() {
 		String seperator = "--------------------";
 		System.out.println(seperator + "Parsing Input Argument" + seperator);
@@ -242,16 +242,16 @@ public class MediaPlayer {
 				videoPlayer.popFrame();
 				label.setIcon(new ImageIcon(videoPlayer.popFrame()));
 				if(aFrame - vFrame > 1)
-					System.out.println("Audio Ahead: "+(aFrame-vFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
+//					System.out.println("Audio Ahead: "+(aFrame-vFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
 				return;
 			}else if(vFrame > aFrame) {
 //				 If video is ahead, wait for audio to catch up.
 				if(vFrame - aFrame > 1)
-					System.out.println("Video Ahead: "+(vFrame-aFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
+//					System.out.println("Video Ahead: "+(vFrame-aFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
 				return;
 
 			}
-			
+
 			label.setIcon(new ImageIcon(videoPlayer.popFrame()));
 		}
 
@@ -335,6 +335,8 @@ public class MediaPlayer {
 			isPaused = false;
 			statusBar.setText(idleString);
 		}
+		
+
 	}
 
 	public static void main(String[] args) {
