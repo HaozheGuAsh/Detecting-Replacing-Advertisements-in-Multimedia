@@ -5,10 +5,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.SynchronousQueue;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -18,7 +18,7 @@ import javax.swing.SwingWorker;
 public class VideoPlayer {
 	JFrame frame;
 	JLabel lbIm1;
-	Queue<BufferedImage> frames = new ConcurrentLinkedQueue<>();
+	BlockingQueue<BufferedImage> frames = new SynchronousQueue<BufferedImage>();
 	
 	String videoPath;
 	Integer width = 480;
@@ -127,18 +127,21 @@ public class VideoPlayer {
 				break;
 			}
 		}
-		System.out.println("On EventDispatchThread: "+SwingUtilities.isEventDispatchThread());
+//		System.out.println("On EventDispatchThread: "+SwingUtilities.isEventDispatchThread());
 		worker = new FrameLoader();
 		worker.execute();
 	}
 	
 	public void cancelWorker() {
 		System.out.println("On EventDispatchThread: "+SwingUtilities.isEventDispatchThread());
-		worker.cancel(true);
+
+		while(!worker.isCancelled()) {
+			worker.cancel(true);
+		}	
 	}
 	
 	public void pause() {
-		System.out.println("Sending Cancel Signal to worker");
+//		System.out.println("Sending Cancel Signal to worker");
 		cancelWorker();
 	}
 	
