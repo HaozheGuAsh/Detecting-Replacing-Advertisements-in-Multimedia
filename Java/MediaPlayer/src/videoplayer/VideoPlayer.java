@@ -52,7 +52,7 @@ public class VideoPlayer {
 	}
 	
 	public Integer getCurFrameOffset() {
-		return currentFrame;
+		return currentFrame ;
 	}
 	public BufferedImage popFrame() {
 		currentFrame++;

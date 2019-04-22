@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Stream;
 import javax.swing.*;
 import videoplayer.VideoPlayer;
@@ -227,11 +228,33 @@ public class MediaPlayer {
 		private void setTimeBar() {
 			timeBar.setText(videoPlayer.makeTimeBar());
 		}
+		
+		private void synchronize() {
+			
+			// Control Synchronization problem here
+//			System.out.println("Current Frame Offset: "+ videoPlayer.getCurFrameOffset());
+//			System.out.println("Current Audio Per Video Offset: "+ audioPlayer.getAudioToVideoFrame());
+			
+			long vFrame = videoPlayer.getCurFrameOffset();
+			long aFrame = audioPlayer.getAudioToVideoFrame();
+			if(aFrame > vFrame) {
+				// If audio is ahead, drop one frame every time to catch up
+				videoPlayer.popFrame();
+				label.setIcon(new ImageIcon(videoPlayer.popFrame()));
+				System.out.println("Audio Ahead of Video for: "+(aFrame-vFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
+				return;
+			}else if(vFrame > aFrame) {
+//				 If video is ahead, wait for audio to catch up.
+				System.out.println("Video Ahead of Audio for: "+(vFrame-aFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
+				return;
+
+			}
+			
+			label.setIcon(new ImageIcon(videoPlayer.popFrame()));
+		}
 
 		private void update() {
 			// System.out.println("Current Frame Queue Size: " + frames.size());
-//			 System.out.println("Current Frame Offset: "+ videoPlayer.getCurFrameOffset());
-//			 System.out.println("Current Audio Per Video Offset: "+ audioPlayer.getAudioToVideoFrame());
 
 			setTimeBar();
 			if (videoPlayer.isQueueEmpty() && !videoPlayer.hasMoreFrames()) {
@@ -240,19 +263,7 @@ public class MediaPlayer {
 				System.out.println("Waiting for Loader to Finish! Freeze the screen");
 				return;
 			} else {
-				// Control Synchronization problem here
-				long vFrame = videoPlayer.getCurFrameOffset();
-				long aFrame = audioPlayer.getAudioToVideoFrame();
-				if(aFrame > vFrame) {
-					// If audio is ahead, drop one frame every time to catch up
-					videoPlayer.popFrame();
-					label.setIcon(new ImageIcon(videoPlayer.popFrame()));
-				}else if(vFrame > aFrame) {
-					// If video is ahead, wait for audio to catch up
-					return;
-				}else {
-					label.setIcon(new ImageIcon(videoPlayer.popFrame()));
-				}
+				synchronize();
 			}
 		}
 
