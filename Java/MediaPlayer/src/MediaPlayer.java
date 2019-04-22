@@ -99,7 +99,7 @@ public class MediaPlayer {
 
 		public FramePanel() {
 			// Buttons Part
-			JButton start = new JButton("START");
+			JButton start = new JButton("Play");
 			start.addActionListener(new ActionListener() {
 
 				@Override
@@ -119,15 +119,15 @@ public class MediaPlayer {
 				}
 			});
 
-			JButton resume = new JButton("RESUME");
-			resume.addActionListener(new ActionListener() {
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					System.out.println("Pressed RESUME");
-					onButtonResume();
-				}
-			});
+//			JButton resume = new JButton("RESUME");
+//			resume.addActionListener(new ActionListener() {
+//
+//				@Override
+//				public void actionPerformed(ActionEvent e) {
+//					System.out.println("Pressed RESUME");
+//					onButtonResume();
+//				}
+//			});
 
 			JButton stop = new JButton("STOP");
 			stop.addActionListener(new ActionListener() {
@@ -174,16 +174,16 @@ public class MediaPlayer {
 			c.gridy = 1;
 			this.add(pause, c);
 
-			c = new GridBagConstraints();
-			c.fill = GridBagConstraints.HORIZONTAL;
-			c.ipady = 0;
-			c.weighty = 0;
-			c.anchor = GridBagConstraints.LAST_LINE_END;
-			c.insets = new Insets(0, 0, 0, 0);
-			c.gridx = 2;
-			c.gridwidth = 1;
-			c.gridy = 1;
-			this.add(resume, c);
+//			c = new GridBagConstraints();
+//			c.fill = GridBagConstraints.HORIZONTAL;
+//			c.ipady = 0;
+//			c.weighty = 0;
+//			c.anchor = GridBagConstraints.LAST_LINE_END;
+//			c.insets = new Insets(0, 0, 0, 0);
+//			c.gridx = 2;
+//			c.gridwidth = 1;
+//			c.gridy = 1;
+//			this.add(resume, c);
 
 			c = new GridBagConstraints();
 			c.fill = GridBagConstraints.HORIZONTAL;
@@ -191,7 +191,7 @@ public class MediaPlayer {
 			c.weighty = 0;
 			c.anchor = GridBagConstraints.LAST_LINE_END;
 			c.insets = new Insets(0, 0, 0, 0);
-			c.gridx = 3;
+			c.gridx = 2;
 			c.gridwidth = 1;
 			c.gridy = 1;
 			this.add(stop, c);
@@ -204,7 +204,7 @@ public class MediaPlayer {
 			c.ipady = 0;
 			c.weighty = 0;
 			c.anchor = GridBagConstraints.LAST_LINE_END;
-			c.insets = new Insets(0, 8, 7, 0);
+			c.insets = new Insets(0, 50, 7, 0);
 			c.gridx = 5;
 			c.gridwidth = 2;
 			c.gridy = 1;
@@ -218,7 +218,7 @@ public class MediaPlayer {
 			c.ipady = 0;
 			c.weighty = 0;
 			c.anchor = GridBagConstraints.LAST_LINE_END;
-			c.insets = new Insets(0, 8, 6, 0);
+			c.insets = new Insets(0, 50, 6, 0);
 			c.gridx = 7;
 			c.gridwidth = 2;
 			c.gridy = 1;
@@ -286,13 +286,13 @@ public class MediaPlayer {
 			audioPlayer.pause();
 		}
 
-		private void onButtonResume() {
-			if (!isPaused)
-				return;
-			onButtonStart();
-			isPaused = false;
-			audioPlayer.resume();
-		}
+//		private void onButtonResume() {
+//			if (!isPaused)
+//				return;
+//			onButtonStart();
+//			isPaused = false;
+//			audioPlayer.resume();
+//		}
 
 		private void onButtonStart() {
 			if (timerStarted)
@@ -310,7 +310,12 @@ public class MediaPlayer {
 				}
 			});
 			timer.start();
-
+			
+			// resume
+			if(!isPaused)
+				return;
+			isPaused = false;
+			audioPlayer.resume();
 		}
 
 		private void onButtonStop() {

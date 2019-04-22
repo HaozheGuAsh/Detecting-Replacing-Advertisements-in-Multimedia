@@ -220,9 +220,8 @@ public class VideoPlayer {
 	}
 	
 	private String framesToTime(Integer numberFrames) {
-		Integer totalSeconds = (numberFrames / frameRate);
-		Integer minutes = (totalSeconds % 3600) / 60;
-		Integer seconds = totalSeconds % 60;
+		Integer minutes = ((numberFrames / frameRate) % 3600) / 60;
+		Integer seconds = Math.round((numberFrames / frameRate) % 60);
 
 		return String.format("%02d:%02d", minutes, seconds);
 	}

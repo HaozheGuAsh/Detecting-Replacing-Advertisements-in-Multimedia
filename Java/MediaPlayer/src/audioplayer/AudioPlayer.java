@@ -78,6 +78,17 @@ public class AudioPlayer {
 		dataClip.setMicrosecondPosition(dataClipTime);
 	}
 	
+	public String makeTimeBar(String totalTimeString) {
+		return framesToTime((int)getAudioToVideoFrame())+" / "+totalTimeString;
+	}
+	
+	private String framesToTime(Integer numberFrames) {
+		Integer minutes = ((numberFrames / videoFps) % 3600) / 60;
+		Integer seconds = Math.round((numberFrames / videoFps) % 60);
+
+		return String.format("%02d:%02d", minutes, seconds);
+	}
+	
 	private long curAudioOffset() {
 		// 2 byte per frame
 		return dataClip.getLongFramePosition()*2;
@@ -92,11 +103,6 @@ public class AudioPlayer {
 			return;
 		
 		System.out.println("Start AudioPlayer");
-		try {
-			openAudioStream();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 		
 		audioRunner = new AudioRunner();
 		audioRunner.execute();
@@ -165,6 +171,11 @@ public class AudioPlayer {
 		videoFps = frameRate;
 		bytePerVideoFrame = bytePerFrame*framePerSecond/videoFps;
 		audioPath = path;
+		try {
+			openAudioStream();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
 	}
 }
