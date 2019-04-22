@@ -282,6 +282,8 @@ public class MediaPlayer {
 			timer.stop();
 			timerStarted = false;
 			isPaused = true;
+			videoPlayer.pause();
+			videoPlayer.start();
 			statusBar.setText(pauseString);
 			audioPlayer.pause();
 		}

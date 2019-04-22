@@ -135,11 +135,17 @@ public class VideoPlayer {
 		worker.cancel(true);
 	}
 	
+	public void pause() {
+		System.out.println("Sending Cancel Signal to worker");
+		worker.cancel(true);
+	}
+	
 	public void stop() {
 		frameOffset = 0;
 		currentFrame = 0;
 		hasMoreFrames = true;
 		frames.clear();
+		System.out.println("Sending Cancel Signal to worker");
 		worker.cancel(true);
 	}
 	private class FrameLoader extends SwingWorker<Boolean, Void> {
