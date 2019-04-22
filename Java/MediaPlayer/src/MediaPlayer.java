@@ -241,13 +241,13 @@ public class MediaPlayer {
 				// If audio is ahead, drop one frame every time to catch up
 				videoPlayer.popFrame();
 				label.setIcon(new ImageIcon(videoPlayer.popFrame()));
-				if(aFrame - vFrame > 1)
-//					System.out.println("Audio Ahead: "+(aFrame-vFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
+				if(aFrame - vFrame > 2)
+					System.out.println("Audio Ahead: "+(aFrame-vFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
 				return;
 			}else if(vFrame > aFrame) {
 //				 If video is ahead, wait for audio to catch up.
-				if(vFrame - aFrame > 1)
-//					System.out.println("Video Ahead: "+(vFrame-aFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
+				if(vFrame - aFrame > 2)
+					System.out.println("Video Ahead: "+(vFrame-aFrame) +"      Current AudioFrame: "+aFrame+"   Current VideoFrame: "+vFrame);
 				return;
 
 			}
