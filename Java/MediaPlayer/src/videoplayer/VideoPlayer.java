@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
 public class VideoPlayer {
@@ -127,17 +128,19 @@ public class VideoPlayer {
 				break;
 			}
 		}
+		System.out.println("On EventDispatchThread: "+SwingUtilities.isEventDispatchThread());
 		worker = new FrameLoader();
 		worker.execute();
 	}
 	
 	public void cancelWorker() {
+		System.out.println("On EventDispatchThread: "+SwingUtilities.isEventDispatchThread());
 		worker.cancel(true);
 	}
 	
 	public void pause() {
 		System.out.println("Sending Cancel Signal to worker");
-		worker.cancel(true);
+		cancelWorker();
 	}
 	
 	public void stop() {
@@ -146,7 +149,7 @@ public class VideoPlayer {
 		hasMoreFrames = true;
 		frames.clear();
 		System.out.println("Sending Cancel Signal to worker");
-		worker.cancel(true);
+		cancelWorker();
 	}
 	private class FrameLoader extends SwingWorker<Boolean, Void> {
 		@Override
