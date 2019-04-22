@@ -118,6 +118,7 @@ public class VideoPlayer {
 	
 	public void start() {
 		// Load Initial buffer and send out worker
+		
 		while (frames.size() < bufferSize) {
 			Boolean ret = loadFrame();
 			if (!ret) {
@@ -138,7 +139,7 @@ public class VideoPlayer {
 		frameOffset = 0;
 		currentFrame = 0;
 		hasMoreFrames = true;
-		frames.clear();
+		frames = new LinkedList<>();
 	}
 	private class FrameLoader extends SwingWorker<Boolean, Void> {
 		@Override
