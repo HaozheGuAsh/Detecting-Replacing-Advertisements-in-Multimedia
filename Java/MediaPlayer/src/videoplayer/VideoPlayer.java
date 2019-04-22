@@ -5,11 +5,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.SynchronousQueue;
-
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
@@ -18,7 +17,6 @@ import javax.swing.SwingWorker;
 public class VideoPlayer {
 	JFrame frame;
 	JLabel lbIm1;
-	BlockingQueue<BufferedImage> frames = new SynchronousQueue<BufferedImage>();
 	
 	String videoPath;
 	Integer width = 480;
@@ -37,6 +35,7 @@ public class VideoPlayer {
 	
 	FrameLoader worker;
 	
+	BlockingQueue<BufferedImage> frames = new ArrayBlockingQueue<>(bufferSize);
 
 	public Integer getFrameRate() {
 		return frameRate;
@@ -119,7 +118,7 @@ public class VideoPlayer {
 	public void start() {
 		// Load Initial buffer and send out worker
 		
-		while (frames.size() < bufferSize) {
+		while (frames.remainingCapacity() > 10) {
 			Boolean ret = loadFrame();
 			if (!ret) {
 				System.out.println("No More Frames!");
@@ -159,7 +158,7 @@ public class VideoPlayer {
 			// Load Frames to buffer
 			System.out.println("FrameLoader Start");
 			while (!isCancelled()) {
-				if (frames.size() < bufferSize) {
+				if (frames.remainingCapacity() > 10) {
 					Boolean ret = loadFrame();
 					if (!ret)
 						return true;
