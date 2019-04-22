@@ -139,7 +139,8 @@ public class VideoPlayer {
 		frameOffset = 0;
 		currentFrame = 0;
 		hasMoreFrames = true;
-		frames = new LinkedList<>();
+		frames.clear();
+		worker.cancel(true);
 	}
 	private class FrameLoader extends SwingWorker<Boolean, Void> {
 		@Override
