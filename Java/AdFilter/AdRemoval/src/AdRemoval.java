@@ -1,3 +1,4 @@
+import java.awt.EventQueue;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,6 +9,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 
 
@@ -50,6 +54,23 @@ public class AdRemoval {
 		 return -e;
 	}
 	
+	private void interactiveRemoval() {
+		EventQueue.invokeLater(new Runnable() {
+			
+			@Override
+			public void run() {
+				new SceneDetector.display();
+			}
+		});
+	}
+	
+	@SuppressWarnings("serial")
+	protected class SceneDetector extends JPanel{
+		private JLabel label1 = new JLabel();
+		private JLabel label2 = new JLabel();
+		
+	}
+
 	private void resolveArguments(String[] args) {
 		if (args.length != 1) {
 			System.out.println("Invalid Number of Input Arguments");
@@ -113,6 +134,7 @@ public class AdRemoval {
 		
 		/* Scene Transition Detection */
 		System.out.println("String Interative Scene Detection");
+		remover.interactiveRemoval();
 		
 	}
 }
