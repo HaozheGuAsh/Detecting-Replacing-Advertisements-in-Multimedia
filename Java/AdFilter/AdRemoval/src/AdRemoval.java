@@ -17,7 +17,8 @@ public class AdRemoval {
 	String audioPath;
 	String outputDir;
 	
-	private double getShannonEntropy(BufferedImage actualImage){
+	private double getEntropy(BufferedImage actualImage){
+		// Shannon Entropy
 		 List<String> values= new ArrayList<String>();
 		             int n = 0;
 		             HashMap<Integer, Integer> occ = new HashMap<Integer,Integer>();
@@ -109,5 +110,9 @@ public class AdRemoval {
 		/* Resolve Input Arguments */
 		remover.resolveArguments(args);
 		remover.displayConfiguration();
+		
+		/* Scene Transition Detection */
+		System.out.println("String Interative Scene Detection");
+		
 	}
 }
