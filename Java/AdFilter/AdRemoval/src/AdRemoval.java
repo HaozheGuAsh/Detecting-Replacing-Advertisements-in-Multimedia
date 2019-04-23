@@ -15,6 +15,7 @@ public class AdRemoval {
 	String dataset;
 	String videoPath;
 	String audioPath;
+	String outputDir;
 	
 	private double getShannonEntropy(BufferedImage actualImage){
 		 List<String> values= new ArrayList<String>();
@@ -55,7 +56,21 @@ public class AdRemoval {
 		} else {
 			dataset = args[0];
 			//AdRemoval.java -> AdFilter folder -> Java folder -> Project folder -> Data folder..
-			String dataDir = "../../../Data/" + dataset + "/Videos/";
+			String dataDir = "../../../../Data/" + dataset + "/Videos/";
+			String outDir = dataDir+"Output_Scenes";
+			Path outDirPath = Paths.get(outDir).toAbsolutePath().normalize();
+			if(Files.notExists(outDirPath)) {
+				try {
+					Files.createDirectories(outDirPath);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				System.out.println("Creating Output Scenes Directory");
+			}else {
+				System.out.println("Output Scenes Directory Already Exist");
+			}
+			outputDir = outDirPath.toString();
+			
 			List<String> fileList = new ArrayList<String>();
 
 			try (Stream<Path> paths = Files.walk(Paths.get(dataDir))) {
@@ -85,7 +100,7 @@ public class AdRemoval {
 		System.out.println("Dataset: " + dataset);
 		System.out.println("Video file: " + videoPath);
 		System.out.println("Audio file: " + audioPath);
-		System.out.println("Output Directory Path: "+outputPath);
+		System.out.println("Output Directory Path: "+outputDir);
 	}
 	
 	public static void main(String[] args) {
