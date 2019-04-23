@@ -4,4 +4,4 @@ javac AdRemoval.java
 
 echo -e "-------------------- Running AdRemoval --------------------"
 
-java AdRemoval dataset
+java AdRemoval dataset 1
