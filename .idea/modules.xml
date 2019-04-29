@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/Java/AdInsertion/AdInsertion.iml" filepath="$PROJECT_DIR$/Java/AdInsertion/AdInsertion.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Java/AdRemoval/AdRemoval.iml" filepath="$PROJECT_DIR$/Java/AdRemoval/AdRemoval.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Java/MediaPlayer/MediaPlayer.iml" filepath="$PROJECT_DIR$/Java/MediaPlayer/MediaPlayer.iml" />
+    </modules>
+  </component>
+</project>
