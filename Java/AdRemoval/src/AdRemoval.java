@@ -2,6 +2,9 @@ import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.color.ColorSpace;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,6 +30,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingWorker;
+import javax.swing.Timer;
 
 
 
@@ -48,10 +52,24 @@ public class AdRemoval {
 	BlockingQueue<BufferedImage> frames = new ArrayBlockingQueue<>(bufferSize);	
 	Boolean hasMoreFrames = true;
 	Integer frameOffset = 0;
+	
+	Boolean detectorFinished = false;
+	// Frame number on top
 	Integer currentFrame = 0;
 	Integer totalFrames = 0;
 	String totalTimeString;
-
+	
+	// Scene Cut
+	BufferedImage lastFrame;
+	// Threshold for Entropy Difference percent
+	double SceneEntropyThreshold = 4.5;
+	double lastEntropy = 0;
+	double entropyDiffPercent = 0;
+	double colorDistancePercent = 0;
+	double vote = 0;
+	
+	// Color Histogram Similarity
+	
 	private Boolean getVideoSize() {
 		try {
 			int frameLength = width * height * 3;
@@ -85,6 +103,148 @@ public class AdRemoval {
 			e.printStackTrace();
 		}
 		return false;
+	}
+	
+	private BufferedImage popFrame() {
+		lastFrame = frames.remove();
+		currentFrame++;
+		return lastFrame;
+	}
+	
+    private class Holder {
+        final CIELab INSTANCE = new CIELab();
+        private CIELab getInstance() {
+       	 return INSTANCE;
+        }
+   }
+    
+	public class CIELab extends ColorSpace {
+
+	    public CIELab getInstance() {
+	        return new Holder().getInstance();
+	    }
+
+	    @Override
+	    public float[] fromCIEXYZ(float[] colorvalue) {
+	        double l = f(colorvalue[1]);
+	        double L = 116.0 * l - 16.0;
+	        double a = 500.0 * (f(colorvalue[0]) - l);
+	        double b = 200.0 * (l - f(colorvalue[2]));
+	        return new float[] {(float) L, (float) a, (float) b};
+	    }
+
+	    @Override
+	    public float[] fromRGB(float[] rgbvalue) {
+	        float[] xyz = CIEXYZ.fromRGB(rgbvalue);
+	        return fromCIEXYZ(xyz);
+	    }
+
+	    @Override
+	    public float getMaxValue(int component) {
+	        return 128f;
+	    }
+
+	    @Override
+	    public float getMinValue(int component) {
+	        return (component == 0)? 0f: -128f;
+	    }    
+
+	    @Override
+	    public String getName(int idx) {
+	        return String.valueOf("Lab".charAt(idx));
+	    }
+
+	    @Override
+	    public float[] toCIEXYZ(float[] colorvalue) {
+	        double i = (colorvalue[0] + 16.0) * (1.0 / 116.0);
+	        double X = fInv(i + colorvalue[1] * (1.0 / 500.0));
+	        double Y = fInv(i);
+	        double Z = fInv(i - colorvalue[2] * (1.0 / 200.0));
+	        return new float[] {(float) X, (float) Y, (float) Z};
+	    }
+
+	    @Override
+	    public float[] toRGB(float[] colorvalue) {
+	        float[] xyz = toCIEXYZ(colorvalue);
+	        return CIEXYZ.toRGB(xyz);
+	    }
+
+	    CIELab() {
+	        super(ColorSpace.TYPE_Lab, 3);
+	    }
+
+	    private double f(double x) {
+	        if (x > 216.0 / 24389.0) {
+	            return Math.cbrt(x);
+	        } else {
+	            return (841.0 / 108.0) * x + N;
+	        }
+	    }
+
+	    private double fInv(double x) {
+	        if (x > 6.0 / 29.0) {
+	            return x*x*x;
+	        } else {
+	            return (108.0 / 841.0) * (x - N);
+	        }
+	    }
+
+	    private Object readResolve() {
+	        return getInstance();
+	    }
+
+	    private static final long serialVersionUID = 5027741380892134289L;
+
+	    private final ColorSpace CIEXYZ =
+	        ColorSpace.getInstance(ColorSpace.CS_CIEXYZ);
+
+	    private static final double N = 4.0 / 29.0;
+
+	}
+	
+	private double getColorHistogramDistance(BufferedImage img1, BufferedImage img2) {
+		 float[][] l1 = new float[width][height];
+		 float[][] a1 = new float[width][height];
+		 float[][] b1 = new float[width][height];
+		 
+		 float[][] l2 = new float[width][height];
+		 float[][] a2 = new float[width][height];
+		 float[][] b2 = new float[width][height];
+		 
+		 for(int w = 0; w < width; w++) {
+			 for(int h = 0; h < height; h++) {
+				int col = img1.getRGB(w, h);
+				float[] lab = new float[3];
+				lab[2] = col & 0xff;
+				lab[1] = (col & 0xff00) >> 8;
+			 	lab[0] = (col & 0xff0000) >> 16;
+			 	
+			 	lab = new CIELab().fromRGB(lab);
+			 	l1[w][h] = lab[0];
+			 	a1[w][h] = lab[1];
+			 	b1[w][h] = lab[2];
+			 	
+			 	col = img2.getRGB(w, h);
+				lab[2] = col & 0xff;
+				lab[1] = (col & 0xff00) >> 8;
+			 	lab[0] = (col & 0xff0000) >> 16;
+			 	
+			 	lab = new CIELab().fromRGB(lab);
+			 	l2[w][h] = lab[0];
+			 	a2[w][h] = lab[1];
+			 	b2[w][h] = lab[2];
+			 }
+		 }
+		 
+		 
+		 double diff = 0;
+		 for(int w = 0; w < width; w++) {
+			 for(int h = 0; h < height; h++) {
+				 diff += Math.sqrt(Math.pow(l1[w][h] - l2[w][h], 2)+Math.pow(a1[w][h] - a2[w][h], 2)+Math.pow(b1[w][h] - b2[w][h], 2));
+			 }
+		 }
+		 diff /= Math.sqrt(Math.pow(255,2)*3)*width*height;
+		return diff;
 	}
 	
 	private String framesToTime(Integer numberFrames) {
@@ -132,13 +292,18 @@ public class AdRemoval {
 			
 			@Override
 			public void run() {
-				new InteractiveSceneDetector().display();
+				InteractiveSceneDetector jp = new InteractiveSceneDetector();
+				jp.display();
+
 			}
 		});
 	}
 	
 	private void automaticRemoval() {
-		
+		while(!detectorFinished) {
+			
+		}
+		System.out.println("Next Function!");
 	}
 	
 	@SuppressWarnings("serial")
@@ -148,13 +313,23 @@ public class AdRemoval {
 		private JLabel lbText1 = new JLabel();
 		private JLabel lbText2 = new JLabel();
 		
-		JLabel timeBar = new JLabel();
+		private JLabel timeBar = new JLabel();
+		private JLabel diffBar = new JLabel();
 
-		FrameLoader worker;
+		private FrameLoader frameWorker;
 
-		JButton cut = new JButton("Cut");
+		private JButton cut = new JButton("Start");
+		private Boolean start = false;
+		private Boolean finished = false;
 		
-		JButton skip = new JButton("Skip");
+		private Timer timer = new Timer(1000 / 30, new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Boolean flag = checkScene();
+				update(flag);
+			}
+		});
 		
 		public InteractiveSceneDetector() {
 			/* Panel has format :
@@ -164,6 +339,17 @@ public class AdRemoval {
 			 */
 			
 			initFrameLoader();
+			// Set Start Frame
+			lastFrame = frames.peek();
+			
+			cut.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					System.out.println("Pressed CUT");
+					onPressCut();
+				}
+			});
 			
 			GridBagLayout gLayout = new GridBagLayout();
 			this.setLayout(gLayout);
@@ -177,14 +363,14 @@ public class AdRemoval {
 			c.gridx = 0;
 			c.gridy = 1;
 			c.gridwidth = 5;
-			label1.setIcon(new ImageIcon(frames.peek()));
+			label1.setIcon(new ImageIcon(lastFrame));
 			this.add(label1,c);
 			
 			/* Frame 2 */
 			c.gridx = 5;
 			c.gridy = 1;
 			c.gridwidth = 5;
-			label2.setIcon(new ImageIcon(frames.peek()));
+			label2.setIcon(new ImageIcon(lastFrame));
 			this.add(label2,c);
 			
 			/* Text 1 */
@@ -216,28 +402,114 @@ public class AdRemoval {
 			c.gridwidth = 1;
 			this.add(timeBar,c);
 			
-			/* Cut Button */
+			/* Statistic Bar */
+			diffBar.setFont(new Font("Courier New", Font.BOLD, 16));
+			setDiffBar();
+			c.gridx = 5;
+			c.gridy = 2;
+			c.gridwidth = 1;
+			this.add(diffBar,c);
+			
+			
+			/* Continue Button */
 			c.gridx = 0;
 			c.gridy = 3;
-			c.gridwidth = 5;
+			c.gridwidth = 10;
 			this.add(cut,c);
+				
 			
-			/* Skip Button */
-			c.gridx = 5;
-			c.gridy = 3;
-			c.gridwidth = 5;
-			this.add(skip,c);	
-			
+		}
+		private void onPressCut() {
+			if(finished) {
+				return;
+			}
 
+			if(!start) {
+				cut.setText("Continue");
+				start = true;
+			}
+
+			timer.start();
+		}
+		private Boolean checkScene() {
+			if(frames.isEmpty()) {
+				if(!hasMoreFrames) {
+					System.out.println("Finishing SceneDector");
+					finished = true;
+					return false;
+				}else {
+					try {
+						Thread.sleep(200);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+
+			}
+
+			// Look forward
+			double curEntropy = getEntropy(frames.peek());
+			Boolean flag = false;
+			
+			entropyDiffPercent = 100*(Math.abs(curEntropy - lastEntropy)/curEntropy);
+			colorDistancePercent = 100* getColorHistogramDistance(lastFrame,frames.peek());
+			
+			double entropyVote = entropyDiffPercent / SceneEntropyThreshold;
+
+			vote = currentFrame == 0? 1:entropyVote*1;
+			
+			if(vote >= 0.5) {
+				// Entropy vote for Cut Scene
+				System.out.println("Detect Scene Change at: "+currentFrame+" With Ent: "+  
+						String.format("%.2f", entropyDiffPercent)+"%"+ "Lab: "+
+						String.format("%.2f", colorDistancePercent)+"%"
+						);
+				flag = true;
+			}
+
+			lastEntropy = curEntropy;
+			if(flag){
+				return true;
+			}		
+			return false;
+			
 		}
 		
 		private void display() {
 			JFrame frame = new JFrame("Scenes Detector");
-			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 			frame.add(this);
 			frame.setResizable(false);
 			frame.pack();
 			frame.setVisible(true);
+		}
+		
+		private void update(Boolean stop) {
+			if(finished) {
+				timer.stop();
+				detectorFinished = true;
+				automaticRemoval();
+				return;
+			}
+
+			
+			// Update Statistics
+			setTimeBar();
+			setDiffBar();
+			
+			// Update Frame Image Title
+			lbText1.setText("Frame: "+(currentFrame - 1));
+			lbText2.setText("Frame: "+(currentFrame));
+			
+			// Update Image
+			label1.setIcon(new ImageIcon(lastFrame));
+			label2.setIcon(new ImageIcon(popFrame()));
+			if(stop) {
+				timer.stop();
+			}
+
+			
 		}
 		
 		private void initFrameLoader() {
@@ -252,12 +524,18 @@ public class AdRemoval {
 				}
 			}
 //			System.out.println("On EventDispatchThread: "+SwingUtilities.isEventDispatchThread());
-			worker = new FrameLoader();
-			worker.execute();
+			frameWorker = new FrameLoader();
+			frameWorker.execute();
 		}
 		
 		private void setTimeBar() {
 			timeBar.setText(framesToTime(currentFrame)+" / "+totalTimeString);
+		}
+		
+		private void setDiffBar() {
+			diffBar.setText("E: "+ String.format("%.2f", entropyDiffPercent)+"%"+ "  C: "+
+							String.format("%.2f", colorDistancePercent)+"%"+ "    V: "+
+							String.format("%.2f", vote));
 		}
 	}
 	public Boolean loadFrame() {
@@ -350,6 +628,7 @@ public class AdRemoval {
 		}
 	}
 	
+
 	private void resolveArguments(String[] args) {
 		if (args.length != 2) {
 			System.out.println("Invalid Number of Input Arguments");
@@ -404,12 +683,12 @@ public class AdRemoval {
 	private void displayConfiguration() {
 		String seperator = "--------------------";
 		System.out.println(seperator + "Parsing Input Argument" + seperator);
-		System.out.println("Parsing Input Argument -> OK");
-		System.out.println("Dataset: " + dataset);
-		System.out.println("Video file: " + videoPath);
-		System.out.println("Audio file: " + audioPath);
-		System.out.println("Output Directory Path: "+outputDir);
-		System.out.println("Interactive Mode: "+interactiveFlag);
+		System.out.println("\n Parsing Input Argument -> OK");
+		System.out.println("\n Dataset: " + dataset);
+		System.out.println("\n Video file: " + videoPath);
+		System.out.println("\n Audio file: " + audioPath);
+		System.out.println("\n Output Directory Path: "+outputDir);
+		System.out.println("\n Interactive Mode: "+interactiveFlag);
 	}
 	
 	public static void main(String[] args) {
@@ -423,7 +702,7 @@ public class AdRemoval {
 		/* Scene Transition Detection */
 		System.out.println(seperator+"Interative Scene Detection"+seperator);
 		remover.interactiveRemoval();
-		remover.automaticRemoval();
+//		remover.automaticRemoval();
 		
 	}
 }
