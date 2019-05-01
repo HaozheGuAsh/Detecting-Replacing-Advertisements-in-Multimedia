@@ -49,7 +49,7 @@ public class AudioPlayer {
 			} catch (UnsupportedAudioFileException e1) {
 			    throw new PlayWaveException(e1);
 			} catch (IOException e1) {
-			    throw new PlayWaveException(e1);
+			    throw new PlayWaveException("Exception on audioplayer 52 line",e1);
 			}
 			
 			// Obtain the information about the AudioInputStream

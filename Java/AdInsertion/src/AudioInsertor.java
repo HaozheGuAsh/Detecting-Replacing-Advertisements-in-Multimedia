@@ -1,6 +1,7 @@
 import java.awt.Point;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,6 +15,14 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
 
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
+
 public class AudioInsertor {
 	private int frameRate;
 	private int bytePerVideoFrame;
@@ -26,7 +35,10 @@ public class AudioInsertor {
 	private final int framePerSecond = 48000;
 	private long audioFrameOffset = 0;
 	private long totalAudioFrames = 0;
+	
+	
 	private Vector<Point> ad2Remove;
+	AudioInputStream inputAIS;
 	
 	///hardcode output path here
 	private String outputPath;
@@ -44,6 +56,7 @@ public class AudioInsertor {
 	}
 	
 	public AudioInsertor(int frameRate, String audioPath, String wRemovalPath, Vector<Point> removePos) {
+		
 		this.frameRate = frameRate;
 		bytePerVideoFrame = bytePerFrame*framePerSecond/frameRate;
 		this.audioPath = audioPath;
@@ -238,8 +251,61 @@ public class AudioInsertor {
 			}
 		}
 		out.close();
-		modifyWavHeader(outputPath);
+		
+		ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+		
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(outputPath));
+		int read;
+		byte[] buff = new byte[1024];
+		while ((read = in.read(buff)) > 0)
+		{
+		    out2.write(buff, 0, read);
+		}
+		out2.flush();
+		in.close();
+		byte[] audioBytes = out2.toByteArray();
+		genWav(audioBytes);
+		
 		System.out.println("Audio Removal Completed");
+	}
+	
+	public void genWav(byte[] audioByte) throws IOException{
+		totalAudioFrames = getAudioFrames(audioPath);
+		
+		File sourceFile = new File(audioPath);
+		File outputFile = new File(outputPath);
+		try {
+	        inputAIS = AudioSystem.getAudioInputStream(sourceFile);
+	        Clip clip = AudioSystem.getClip();
+	        clip.open(inputAIS);
+	        long totalMicroSecond = clip.getMicrosecondLength();
+    	} catch (UnsupportedAudioFileException e) {
+	
+	    } catch (IOException e) {
+	
+	    } catch (LineUnavailableException e) {
+	
+	    }
+		
+        AudioFileFormat fileFormat = null;
+        try {
+            fileFormat = AudioSystem.getAudioFileFormat(sourceFile);
+            AudioFileFormat.Type targetFileType = fileFormat.getType();
+                AudioFormat audioFormat = fileFormat.getFormat();
+
+
+                ByteArrayInputStream bais = new ByteArrayInputStream(audioByte);
+                AudioInputStream outputAIS = new AudioInputStream(bais, audioFormat,
+                		audioByte.length / audioFormat.getFrameSize());
+
+                AudioSystem.write(outputAIS, targetFileType, outputFile);
+
+        } catch (UnsupportedAudioFileException e) {
+
+        } catch (IOException e) {
+
+        }
+        
 	}
 	public void insertAudio() throws IOException{
 		System.out.println("Starting audio insertion");
