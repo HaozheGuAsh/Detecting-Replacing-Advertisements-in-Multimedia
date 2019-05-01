@@ -425,7 +425,7 @@ public class VideoInsertor {
 		            byte[] videoFrame = blockingQueue.take();
 //		            System.out.println(videoFrame.length);
 		            processedVideoFrame++;
-//		        	System.out.println("writing oringinal video at  " + processedVideoFrame + "th frame");
+		        	System.out.println("writing oringinal video at  " + processedVideoFrame + "th frame");
 		            out.write(videoFrame);
 		            if(blockingQueue.size() == 0 && isDone){
 		            	return;
