@@ -32,14 +32,16 @@ public class AdInsertion {
 	String videoPath;
 	
 	String dataset;
+	Integer mode;
 	
 	private void resolveArguments(String[] args) {
-		if (args.length != 1) {
+		if (args.length != 2) {
 			System.out.println("Invalid Number of Input Arguments");
-			System.out.println("The format should be --> java ProgramName DatasetUsed");
+			System.out.println("The format should be --> java ProgramName DatasetUsed remove/insert(0/1)");
 			System.exit(-1);
 		} else {
 			dataset = args[0];
+			mode = Integer.parseInt(args[1]);
 			//AdInsertion.java -> src,bin folder -> Java folder -> Project folder -> Data folder..
 			String dataDir = "../../../Data/" + dataset + "/Videos/";
 			String adDir = Paths.get("../../../Data/" + dataset+"/Ads").toAbsolutePath().normalize().toString();
@@ -182,9 +184,10 @@ public class AdInsertion {
 	
 	private void insert() {
 		String seperator = "--------------------";
+		
 		System.out.println(seperator+" Inserting Audio "+seperator);
 		
-		AudioInsertor audioInsertor = new AudioInsertor(30,audioPath,ad1Audio,
+		AudioInsertor audioInsertor = new AudioInsertor(30,wRemovalPath+"/wRemoval.wav",ad1Audio,
 										ad2Audio,ad1Pos,ad2Pos,wInsertionPath+"/wInsertion.wav");
 		try {
 			audioInsertor.insertAudio();
@@ -196,7 +199,7 @@ public class AdInsertion {
 		System.out.println(seperator+" Inserting Video "+seperator);
 		
 		
-		VideoInsertor videoInsertor = new VideoInsertor(videoPath,ad1Video,
+		VideoInsertor videoInsertor = new VideoInsertor(wRemovalPath+"/wRemoval.rgb",ad1Video,
 										ad2Video,ad1Pos,ad2Pos,wInsertionPath+"/wInsertion.rgb");
 		
 		videoInsertor.insertVideo();
@@ -208,8 +211,11 @@ public class AdInsertion {
 		/* Resolve Input Arguments */
 		insertor.resolveArguments(args);
 		insertor.displayConfiguration();
-		insertor.remove();
-		insertor.insert();
+		if(insertor.mode ==0) {
+			insertor.remove();
+		}else {
+			insertor.insert();
+		}
 		
 	}
 }

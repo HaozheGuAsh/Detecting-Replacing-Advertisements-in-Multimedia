@@ -438,6 +438,7 @@ public class VideoInsertor {
 			} finally{
 				try {
 					out.close();
+					System.out.println("Video Insertion Completed");
 				} catch (IOException e) {
 					e.printStackTrace();
 				}

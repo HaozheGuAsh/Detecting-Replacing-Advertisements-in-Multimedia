@@ -7,9 +7,14 @@ Error="${Red_font_prefix}[ERROR]${Font_color_suffix}"
 Tip="${Green_font_prefix}[ATTENTION]${Font_color_suffix}"
 
 filepath=$(cd "$(dirname "$0")"; pwd)
-echo -e "${Info} Project RunAll Script Start"
-echo -e "${Info} Running AdRemoval to Remove Current Advertisement"
 
+
+echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
+echo -e "${Info} Project RunAll Script Start"
+
+
+# AdRemoval
+echo -e "${Info} Running AdRemoval to Remove Current Advertisement"
 echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
 
 cd Java/AdRemoval/src/
@@ -18,8 +23,15 @@ cd "${filepath}"
 
 echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
 
-echo -e "${Info} Running AdInsertion to Add Matched Advertisement"
 
+# AdBrandDetection
+echo -e "${Info} Running AdBrandDetection in Background to find Matched Brand Frame"
+echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
+
+echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
+
+# AdInsertion
+echo -e "${Info} Running AdInsertion to Add Matched Advertisement"
 echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
 
 cd Java/AdInsertion/src/
@@ -28,7 +40,9 @@ cd "${filepath}"
 
 echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
 
+# MediaPlayer
 echo -e "${Info} Running MediaPlayer to Show Result"
+
 
 echo -e "${Green_font_prefix}--------------------------------------------------------------------------------${Font_color_suffix}"
 
