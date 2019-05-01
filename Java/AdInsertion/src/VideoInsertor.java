@@ -272,13 +272,15 @@ public class VideoInsertor {
 		    
 		    //read R value in the video file to bytes[] and put it in the blockingQueue;
 		    //if there is insertion point, read from the ad file;
+      		int ad1Start = ad2Remove.get(0).x;
+    		int ad1End = ad2Remove.get(0).y;
+    		int ad2Start = ad2Remove.get(1).x;
+    		int ad2End = ad2Remove.get(1).y;
+    		videoTotalFrames -= (ad1End - ad1Start +1);
+    		videoTotalFrames -= (ad2End - ad2Start +1);
 		    while(videoFrameOffset < videoTotalFrames){
 		          try {
 //		        	  System.out.println("now videoFrameOffset is "+ videoFrameOffset + "at insertionpoint is " + insertionPointSet1.contains(String.valueOf(videoFrameOffset)));
-			      		int ad1Start = ad2Remove.get(0).x;
-			    		int ad1End = ad2Remove.get(0).y;
-			    		int ad2Start = ad2Remove.get(1).x;
-			    		int ad2End = ad2Remove.get(1).y;
 		        	if(videoFrameOffset>=ad1Start &&videoFrameOffset<=ad1End){
 	        			insertVideoBytePerFrame();
 		        	} else if(videoFrameOffset>=ad2Start &&videoFrameOffset<=ad2End){
@@ -315,7 +317,7 @@ public class VideoInsertor {
 		    //if there is insertion point, read from the ad file;
 		    while(videoFrameOffset < videoTotalFrames){
 		          try {
-//		        	  System.out.println("now videoFrameOffset is "+ videoFrameOffset + "at insertionpoint is " + insertionPointSet1.contains(String.valueOf(videoFrameOffset)));
+//		        	  System.out.println("reading oringinal video at  " + videoFrameOffset + "th frame");
 		        	if(insertionPointSet1.contains(String.valueOf(videoFrameOffset))){
 		        		while(ad1FrameOffset < ad1TotalFrames){
 //		        			System.out.println("inserting oringinal video at  " + ad1FrameOffset + "th frame");
@@ -425,7 +427,7 @@ public class VideoInsertor {
 		            byte[] videoFrame = blockingQueue.take();
 //		            System.out.println(videoFrame.length);
 		            processedVideoFrame++;
-		        	System.out.println("writing oringinal video at  " + processedVideoFrame + "th frame");
+//		        	System.out.println("writing oringinal video at  " + processedVideoFrame + "th frame");
 		            out.write(videoFrame);
 		            if(blockingQueue.size() == 0 && isDone){
 		            	return;
