@@ -2,7 +2,8 @@
 Data/dataset
 Data/dataset2
 Data/dataset3
-Data/outputDataset
+Data/outputDataset/wInsertion
+Data/outputDataset/wRemoval
 Data/*.zip
 Data/cookie
 Data/ReadMe.txt

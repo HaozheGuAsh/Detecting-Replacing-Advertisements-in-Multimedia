@@ -325,7 +325,19 @@ public class AudioInsertor {
 //		out.write(insertAdAllBytes(ad1Path));
 		
 		out.close();
-		modifyWavHeader(outputPath);
+		ByteArrayOutputStream out2 = new ByteArrayOutputStream();
+		
+		BufferedInputStream in = new BufferedInputStream(new FileInputStream(outputPath));
+		int read;
+		byte[] buff = new byte[1024];
+		while ((read = in.read(buff)) > 0)
+		{
+		    out2.write(buff, 0, read);
+		}
+		out2.flush();
+		in.close();
+		byte[] audioBytes = out2.toByteArray();
+		genWav(audioBytes);
 		System.out.println("Audio insertion Completed");
 	}
 
