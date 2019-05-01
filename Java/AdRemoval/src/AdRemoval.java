@@ -2,6 +2,7 @@ import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Point;
 import java.awt.color.ColorSpace;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,6 +17,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
@@ -43,7 +45,7 @@ public class AdRemoval {
 	String outputDir;
 	Boolean interactiveFlag = false;
 	
-	Integer bufferSize = 100;
+	Integer bufferSize = 50;
 	Integer freezeGap = 500;
 	Integer width = 480;
 	Integer height = 270;
@@ -61,12 +63,30 @@ public class AdRemoval {
 	
 	// Scene Cut
 	BufferedImage lastFrame;
+	BufferedImage last2Frame;
+	BufferedImage last3Frame;
 	// Threshold for Entropy Difference percent
-	double SceneEntropyThreshold = 4.5;
+	float[][] lastL = new float[width][height];
+	float[][] lastA = new float[width][height];
+	float[][] lastB = new float[width][height];
+	double sceneEntropyThreshold = 5;
+	double sceneColorThreshold = 5;
+	double sceneColorOverflowThreshold = 3;
+	double sceneADColorThreshold = 0.04;
+	int	sceneLengthThreshold = 100;
+	int sceneUnderflowLengthThreshold = 500;
+	double sceneColorUnderflowThreshold = 0.01;
 	double lastEntropy = 0;
 	double entropyDiffPercent = 0;
 	double colorDistancePercent = 0;
+	double overflowVote = 0;
+	double underflowVote = 0;
 	double vote = 0;
+	Vector<Double> voteRecord = new Vector<Double>();
+	int sceneStart = -1;
+	Vector<Point> adFrame = new Vector<Point>();
+	double averateVote = 0;
+	double sceneSumVote = 0;
 	
 	// Color Histogram Similarity
 	
@@ -74,7 +94,6 @@ public class AdRemoval {
 		try {
 			int frameLength = width * height * 3;
 			Integer count = 0;
-
 			File file = new File(videoPath);
 			RandomAccessFile raf = new RandomAccessFile(file, "r");
 
@@ -106,6 +125,8 @@ public class AdRemoval {
 	}
 	
 	private BufferedImage popFrame() {
+		last3Frame = last2Frame;
+		last2Frame = lastFrame;
 		lastFrame = frames.remove();
 		currentFrame++;
 		return lastFrame;
@@ -202,41 +223,25 @@ public class AdRemoval {
 
 	}
 	
-	private double getColorHistogramDistance(BufferedImage img1, BufferedImage img2) {
-		 float[][] l1 = new float[width][height];
-		 float[][] a1 = new float[width][height];
-		 float[][] b1 = new float[width][height];
-		 
-		 float[][] l2 = new float[width][height];
-		 float[][] a2 = new float[width][height];
-		 float[][] b2 = new float[width][height];
-		 
+	private void getLab(BufferedImage img, float[][] l, float[][] a, float[][] b) {
 		 for(int w = 0; w < width; w++) {
 			 for(int h = 0; h < height; h++) {
-				int col = img1.getRGB(w, h);
+				int col = img.getRGB(w, h);
 				float[] lab = new float[3];
 				lab[2] = col & 0xff;
 				lab[1] = (col & 0xff00) >> 8;
 			 	lab[0] = (col & 0xff0000) >> 16;
 			 	
 			 	lab = new CIELab().fromRGB(lab);
-			 	l1[w][h] = lab[0];
-			 	a1[w][h] = lab[1];
-			 	b1[w][h] = lab[2];
-			 	
-			 	col = img2.getRGB(w, h);
-				lab[2] = col & 0xff;
-				lab[1] = (col & 0xff00) >> 8;
-			 	lab[0] = (col & 0xff0000) >> 16;
-			 	
-			 	lab = new CIELab().fromRGB(lab);
-			 	l2[w][h] = lab[0];
-			 	a2[w][h] = lab[1];
-			 	b2[w][h] = lab[2];
+			 	l[w][h] = lab[0];
+			 	a[w][h] = lab[1];
+			 	b[w][h] = lab[2];
+			 
 			 }
 		 }
-		 
-		 
+	}
+	
+	private double getColorDiffPercent(float[][] l1, float[][] a1, float[][] b1, float[][] l2, float[][] a2, float[][] b2) {
 		 double diff = 0;
 		 for(int w = 0; w < width; w++) {
 			 for(int h = 0; h < height; h++) {
@@ -244,6 +249,36 @@ public class AdRemoval {
 			 }
 		 }
 		 diff /= Math.sqrt(Math.pow(255,2)*3)*width*height;
+		return diff;
+	}
+	
+	private double getColorBlockDiffPercent(float[][] l1, float[][] a1, float[][] b1, float[][] l2, float[][] a2, float[][] b2) {
+		 int blockSize = 10;
+		 double diff = 0;
+		 for(int w = 0; w < width/blockSize; w++) {
+			 for(int h = 0; h < height/blockSize; h++) {
+				 float avgl1 = 0,avga1 = 0,avgb1 = 0,avgl2 = 0,avga2 = 0,avgb2 = 0;
+				 for(int ww = 0; ww<blockSize;ww++) {
+					 for(int hh = 0;hh<blockSize;hh++) {
+						 int idxW = w*blockSize+ww;
+						 int idxH = h*blockSize+hh;
+						 
+						 avgl1 += l1[idxW][idxH];
+						 avga1 += a1[idxW][idxH];
+						 avgb1 += b1[idxW][idxH];
+						 
+						 avgl2 += l1[idxW][idxH];
+						 avga2 += a2[idxW][idxH];
+						 avgb2 += b2[idxW][idxH];
+					 }
+				 }
+				 
+				 diff += Math.sqrt(Math.pow((avgl1 - avgl2)/(blockSize*blockSize), 2)+
+						 Math.pow((avga1 - avga2)/(blockSize*blockSize), 2)+
+						 Math.pow((avgb1 - avgb2)/(blockSize*blockSize), 2));
+			 }
+		 }
+		 diff /= Math.sqrt(Math.pow(255,2)*3)*(width/blockSize)*(height/blockSize);
 		return diff;
 	}
 	
@@ -299,19 +334,26 @@ public class AdRemoval {
 		});
 	}
 	
-	private void automaticRemoval() {
+	private void printAdFrame() {
 		while(!detectorFinished) {
 			
 		}
-		System.out.println("Next Function!");
+		System.out.println("Save Ad Frame Info");
+		for(int i = 0; i < adFrame.size();i++) {
+			int startPos = adFrame.get(i).x;
+			int endPos = adFrame.get(i).y;
+			System.out.println("Advertisement Scene "+(i+1)+"  StartFrame: "+ startPos+" EndFrame: "+endPos);
+		}
 	}
 	
 	@SuppressWarnings("serial")
 	protected class InteractiveSceneDetector extends JPanel{
 		private JLabel label1 = new JLabel();
 		private JLabel label2 = new JLabel();
+		private JLabel label3 = new JLabel();
 		private JLabel lbText1 = new JLabel();
 		private JLabel lbText2 = new JLabel();
+		private JLabel lbText3 = new JLabel();
 		
 		private JLabel timeBar = new JLabel();
 		private JLabel diffBar = new JLabel();
@@ -320,14 +362,23 @@ public class AdRemoval {
 
 		private JButton cut = new JButton("Start");
 		private Boolean start = false;
+		private Boolean stopPoint = false;
 		private Boolean finished = false;
+		private Boolean backWind = false;
 		
 		private Timer timer = new Timer(1000 / 30, new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				Boolean flag = checkScene();
-				update(flag);
+				Integer flag = checkScene();
+				if(flag ==2) {
+					backWind = true;
+					timer.stop();
+					stopPoint = true;
+				}else {
+					update(flag ==1);
+				}
+				
 			}
 		});
 		
@@ -341,6 +392,8 @@ public class AdRemoval {
 			initFrameLoader();
 			// Set Start Frame
 			lastFrame = frames.peek();
+			last2Frame = frames.peek();
+			last3Frame = frames.peek();
 			
 			cut.addActionListener(new ActionListener() {
 
@@ -373,6 +426,13 @@ public class AdRemoval {
 			label2.setIcon(new ImageIcon(lastFrame));
 			this.add(label2,c);
 			
+			/* Frame 3 */
+			c.gridx = 10;
+			c.gridy = 1;
+			c.gridwidth = 5;
+			label3.setIcon(new ImageIcon(lastFrame));
+			this.add(label3,c);
+			
 			/* Text 1 */
 			lbText1.setHorizontalAlignment(SwingConstants.CENTER);
 			lbText1.setVerticalAlignment(SwingConstants.CENTER);
@@ -393,6 +453,16 @@ public class AdRemoval {
 			c.gridy = 0;
 			this.add(lbText2,c);
 			
+			/* Text 3 */
+			lbText3.setHorizontalAlignment(SwingConstants.CENTER);
+			lbText3.setVerticalAlignment(SwingConstants.CENTER);
+			lbText3.setFont(new Font("Courier New", Font.BOLD, 16));
+			lbText3.setText("Frame: ");
+			
+			c.gridx = 10;
+			c.gridy = 0;
+			this.add(lbText3,c);
+			
 			
 			/* Time Bar */
 			timeBar.setFont(new Font("Courier New", Font.BOLD, 16));
@@ -407,14 +477,14 @@ public class AdRemoval {
 			setDiffBar();
 			c.gridx = 5;
 			c.gridy = 2;
-			c.gridwidth = 1;
+			c.gridwidth = 10;
 			this.add(diffBar,c);
 			
 			
 			/* Continue Button */
 			c.gridx = 0;
 			c.gridy = 3;
-			c.gridwidth = 10;
+			c.gridwidth = 15;
 			this.add(cut,c);
 				
 			
@@ -423,20 +493,62 @@ public class AdRemoval {
 			if(finished) {
 				return;
 			}
-
+			
+			if(start && stopPoint) {
+				if(backWind) {
+					backWind = false;
+					int tmp = currentFrame;
+					while(tmp%10 !=0) {
+						tmp--;
+						System.out.println("new Frame num: "+tmp);
+					}
+					recordScene(tmp);
+				}else {
+					recordScene(currentFrame-1);
+				}
+				
+				stopPoint = false;
+				timer.start();
+			}
+			
 			if(!start) {
 				cut.setText("Continue");
 				start = true;
+				stopPoint = true;
+				timer.start();
 			}
 
-			timer.start();
 		}
-		private Boolean checkScene() {
+		
+		private void recordScene(int frameNumber) {
+			if(sceneStart == -1) {
+				// Initial Scene 
+				sceneStart = frameNumber;
+				System.out.println("Add Starting Point: "+sceneStart);
+				return;
+			}
+
+			// Make Frame, need to -1
+			Boolean adScene = (sceneSumVote/(currentFrame-sceneStart+1))<sceneADColorThreshold?true:false;
+			System.out.println("New Scene. Start From: "+sceneStart+" End at: "+(frameNumber - 1)+
+					" Record Length: "+(frameNumber - sceneStart)+
+					" Type of Scene: "+(adScene?"Advertisement":"Normal")
+					);
+			if(adScene) {
+				adFrame.add(new Point(sceneStart,frameNumber-1));
+			}
+			sceneStart = frameNumber;
+			System.out.println("Add Starting Point: "+sceneStart);
+			sceneSumVote = 0;
+
+		}
+		
+		private Integer checkScene() {
 			if(frames.isEmpty()) {
 				if(!hasMoreFrames) {
 					System.out.println("Finishing SceneDector");
 					finished = true;
-					return false;
+					return 0;
 				}else {
 					try {
 						Thread.sleep(200);
@@ -452,27 +564,105 @@ public class AdRemoval {
 			double curEntropy = getEntropy(frames.peek());
 			Boolean flag = false;
 			
+			// Length
+			double lengthVote = (currentFrame - sceneStart +1) > sceneLengthThreshold ? 0:1;
+			
+			
+			// Entropy
 			entropyDiffPercent = 100*(Math.abs(curEntropy - lastEntropy)/curEntropy);
-			colorDistancePercent = 100* getColorHistogramDistance(lastFrame,frames.peek());
+			double entropyVote = entropyDiffPercent / sceneEntropyThreshold;
 			
-			double entropyVote = entropyDiffPercent / SceneEntropyThreshold;
+			
+			// Color
+			double lastColorDistancePercent = colorDistancePercent;
+			float[][] curL = new float[width][height];
+			float[][] curA = new float[width][height];
+			float[][] curB = new float[width][height];
+			
+			getLab(frames.peek(), curL, curA, curB);
+			colorDistancePercent= 100*getColorDiffPercent(lastL, lastA, lastB, curL, curA, curB);
+			lastL = curL;lastA = curA;lastB = curB;
+			double colorVote = colorDistancePercent / sceneColorThreshold;
+			
+			// Color Overflow Compensation
+			overflowVote = currentFrame > 10 &&
+						   colorDistancePercent - entropyDiffPercent > sceneColorOverflowThreshold?
+					  	   (entropyDiffPercent - colorDistancePercent):0;
+							  		
+			// Color Underflow
+		  	underflowVote = 0;
+			double underflowNum = Double.parseDouble(String.format("%.2f", colorDistancePercent));
+			double underflowCheck = (currentFrame - sceneStart +1) > sceneUnderflowLengthThreshold && 
+							(underflowNum<sceneColorUnderflowThreshold)?1:0;
+			if(underflowCheck == 1) {
+				double lastUnderflowNum = Double.parseDouble(String.format("%.2f", lastColorDistancePercent));
+				if(lastUnderflowNum <sceneColorUnderflowThreshold && (currentFrame - sceneStart +1) > sceneUnderflowLengthThreshold) {
+					underflowVote = 1;
+				}
+			}
+			
+		    
+		    // Vote
+			vote = entropyVote*0.4+ colorVote*0.6 +overflowVote*0.1;
+			
+			if(vote>1)
+				vote = 1;
+			if(vote<0)
+				vote = 0;
+			
+			voteRecord.add(vote);
+			sceneSumVote += vote;
+			
+			
+			if(underflowVote ==1) {
+				vote = 1;
+			}
+			if(lengthVote == 1){
+				vote = 0;
+			}
+			vote = currentFrame == 0? 1:vote;
+			
+			if(vote>1)
+				vote = 1;
+			if(vote<0)
+				vote = 0;
+			
+			
+//			if(vote>0.8) {
+				System.out.println(currentFrame+" With Ent: "+  
+						String.format("%.2f", entropyDiffPercent)+"%"+ "  Lab: "+
+						String.format("%.2f", colorDistancePercent)+"%"+
+						"  Over: "+String.format("%.2f", overflowVote)+"%"+
+						"  Under: "+String.format("%.2f", underflowVote)+"%"+
+						"  L: "+ String.format("%d", (sceneStart != -1?(currentFrame-sceneStart+1):0))+
+						"  aV: "+ String.format("%.2f", (sceneSumVote/(currentFrame-sceneStart+1)))+
+						"  Vote: "+String.format("%.2f", vote)
+						);	
+//			}
 
-			vote = currentFrame == 0? 1:entropyVote*1;
-			
-			if(vote >= 0.5) {
-				// Entropy vote for Cut Scene
-				System.out.println("Detect Scene Change at: "+currentFrame+" With Ent: "+  
-						String.format("%.2f", entropyDiffPercent)+"%"+ "Lab: "+
-						String.format("%.2f", colorDistancePercent)+"%"
+			if(vote >= 0.9 ) {
+				// Entropy vote for Cut Scenes
+				System.out.println("Detect Scene Change! "+currentFrame+" With Ent: "+  
+						String.format("%.2f", entropyDiffPercent)+"%"+ "  Lab: "+
+						String.format("%.2f", colorDistancePercent)+"%"+
+						"  Over: "+String.format("%.2f", overflowVote)+"%"+
+						"  Under: "+String.format("%.2f", underflowVote)+"%"+
+						"  L: "+ String.format("%d", (sceneStart != -1?(currentFrame-sceneStart+1):0))+
+						"  aV: "+ String.format("%.2f", (sceneSumVote/(currentFrame-sceneStart+1)))+
+						"  Vote: "+String.format("%.2f", vote)
 						);
 				flag = true;
 			}
 
 			lastEntropy = curEntropy;
+			if(underflowVote ==1 && lengthVote == 0) {
+				return 2;
+			}
 			if(flag){
-				return true;
-			}		
-			return false;
+				return 1;
+			}
+
+			return 0;
 			
 		}
 		
@@ -484,31 +674,36 @@ public class AdRemoval {
 			frame.pack();
 			frame.setVisible(true);
 		}
-		
+
 		private void update(Boolean stop) {
 			if(finished) {
 				timer.stop();
 				detectorFinished = true;
-				automaticRemoval();
+				recordScene(currentFrame-1);
+				printAdFrame();
 				return;
 			}
+
+			// Update Frame Image Title
+			lbText1.setText("Frame: "+(currentFrame - 2));
+			lbText2.setText("Frame: "+(currentFrame - 1));
+			lbText3.setText("Frame: "+(currentFrame));
+			
+			// Statistics
 
 			
 			// Update Statistics
 			setTimeBar();
 			setDiffBar();
 			
-			// Update Frame Image Title
-			lbText1.setText("Frame: "+(currentFrame - 1));
-			lbText2.setText("Frame: "+(currentFrame));
-			
 			// Update Image
-			label1.setIcon(new ImageIcon(lastFrame));
-			label2.setIcon(new ImageIcon(popFrame()));
+			label1.setIcon(new ImageIcon(last2Frame));
+			label2.setIcon(new ImageIcon(lastFrame));
+			label3.setIcon(new ImageIcon(popFrame()));
 			if(stop) {
 				timer.stop();
+				stopPoint = true;
 			}
-
 			
 		}
 		
@@ -533,9 +728,15 @@ public class AdRemoval {
 		}
 		
 		private void setDiffBar() {
-			diffBar.setText("E: "+ String.format("%.2f", entropyDiffPercent)+"%"+ "  C: "+
-							String.format("%.2f", colorDistancePercent)+"%"+ "    V: "+
-							String.format("%.2f", vote));
+			diffBar.setText("e: "+ String.format("%.2f", entropyDiffPercent)+"%"+ 
+							"  c: "+ String.format("%.2f", colorDistancePercent)+"%"+
+							"  o: "+ String.format("%.0f", overflowVote)+
+							"  u: "+ String.format("%.0f", underflowVote)+
+							"  L: "+ String.format("%d", (sceneStart != -1?(currentFrame-sceneStart+1):0))+
+							"  aV: "+ String.format("%.2f", (sceneSumVote/(currentFrame-sceneStart+1)))+
+							"  V: "+ String.format("%.2f", vote)+
+							"    Type: "+((sceneSumVote/(currentFrame-sceneStart+1))<sceneADColorThreshold?"Ad":"N")
+							);
 		}
 	}
 	public Boolean loadFrame() {
@@ -702,7 +903,7 @@ public class AdRemoval {
 		/* Scene Transition Detection */
 		System.out.println(seperator+"Interative Scene Detection"+seperator);
 		remover.interactiveRemoval();
-//		remover.automaticRemoval();
+		remover.printAdFrame();
 		
 	}
 }
